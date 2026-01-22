@@ -7,7 +7,6 @@ import {
   UploadModal,
 } from "./components";
 import { useMediaLibrary, useMediaUpload } from "./hooks";
-import { MediaLibrarySkeleton } from "./media-skeleton";
 import type { MediaAsset } from "./types";
 import { Button } from "@/components/ui/button";
 import ConfirmationModal from "@/components/ui/confirmation-modal";
@@ -39,8 +38,6 @@ export function MediaLibrary() {
     refetch,
   } = useMediaLibrary();
 
-  const isInitialPending = isPending && !mediaItems.length;
-
   const {
     isOpen: isUploadOpen,
     setIsOpen: setIsUploadOpen,
@@ -64,10 +61,6 @@ export function MediaLibrary() {
       console.error("Delete request failed:", error);
     }
   };
-
-  if (isInitialPending && !searchQuery) {
-    return <MediaLibrarySkeleton />;
-  }
 
   return (
     <div className="space-y-8 pb-20">

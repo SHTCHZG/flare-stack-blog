@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import {
   useInfiniteQuery,
   useMutation,
@@ -18,20 +19,28 @@ import {
   totalMediaSizeQuery,
 } from "@/features/media/queries";
 import { useDebounce } from "@/hooks/use-debounce";
+import { Route } from "@/routes/admin/media";
 
 export function useMediaLibrary() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { search, unused } = Route.useSearch();
 
-  // Search State
-  const [searchQuery, setSearchQuery] = useState("");
-  const debouncedSearch = useDebounce(searchQuery, 300);
+  // Search Param Handlers
+  const setSearchQuery = (term: string) => {
+    navigate({
+      search: (prev) => ({ ...prev, search: term }),
+      replace: true,
+    });
+  };
 
-  // Unused Only Filter
-  const [unusedOnly, setUnusedOnly] = useState(false);
+  const setUnusedOnly = (val: boolean) => {
+    navigate({
+      search: (prev) => ({ ...prev, unused: val }),
+    });
+  };
 
-  // Track previous search to detect changes
-  const [prevSearchQuery, setPrevSearchQuery] = useState("");
-  const [prevUnusedOnly, setPrevUnusedOnly] = useState(false);
+  const debouncedSearch = useDebounce(search, 300);
 
   // Selection & Deletion State (使用 key 作为唯一标识)
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(
@@ -48,7 +57,7 @@ export function useMediaLibrary() {
     isPending,
     refetch,
   } = useInfiniteQuery({
-    ...mediaInfiniteQueryOptions(debouncedSearch, unusedOnly),
+    ...mediaInfiniteQueryOptions(debouncedSearch, unused),
   });
 
   // Flatten all pages into a single array
@@ -72,14 +81,11 @@ export function useMediaLibrary() {
   }, [linkedKeysData]);
 
   // Clear selections when filters changes (actual data refresh)
+  // We use the DEBOUNCED search here because that's what triggers the query
   useEffect(() => {
-    if (debouncedSearch !== prevSearchQuery || unusedOnly !== prevUnusedOnly) {
-      setSelectedKeys(new Set());
-      setDeleteTarget(null);
-      setPrevSearchQuery(debouncedSearch);
-      setPrevUnusedOnly(unusedOnly);
-    }
-  }, [debouncedSearch, prevSearchQuery, unusedOnly, prevUnusedOnly]);
+    setSelectedKeys(new Set());
+    setDeleteTarget(null);
+  }, [debouncedSearch, unused]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -201,9 +207,9 @@ export function useMediaLibrary() {
   return {
     mediaItems,
     totalCount: mediaItems.length,
-    searchQuery,
+    searchQuery: search ?? "", // Ensure compatibility with string type
     setSearchQuery,
-    unusedOnly,
+    unusedOnly: unused ?? false,
     setUnusedOnly,
     selectedIds: selectedKeys, // 保持接口兼容
     toggleSelection,
